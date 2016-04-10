@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,6 +60,21 @@ public class MainFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 checkUpgrade();
+            }
+        });
+
+        button = (Button) rootView.findViewById(R.id.test_string_array);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                String[] arrays = getResources().getStringArray(R.array.array_test);
+                StringBuilder sb = new StringBuilder();
+                sb.append("length: " + arrays.length + "\n");
+                for (int i = 0; i < arrays.length; i++) {
+                    sb.append("pos " + i + ": " + arrays[i] + "\n");
+                }
+                Toast.makeText(getActivity(), sb.toString(), Toast.LENGTH_SHORT).show();
+                Log.d("Small", "array_test result");
+                Log.d("Small", sb.toString());
             }
         });
         return rootView;
