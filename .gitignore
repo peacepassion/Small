@@ -38,6 +38,7 @@ local.properties
 # Small
 build-small/
 smallLibs/
+*.bundle
 
 # OS X
 .DS_Store

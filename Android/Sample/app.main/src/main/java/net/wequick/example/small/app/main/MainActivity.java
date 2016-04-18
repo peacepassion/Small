@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
 //                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
 //                        .setAction("Action", null).show();
-                Small.openUri("https://github.com/wequick/Small/issues", MainActivity.this);
+//                Small.openUri("https://github.com/wequick/Small/issues", MainActivity.this);
             }
         });
 
@@ -113,7 +113,8 @@ public class MainActivity extends AppCompatActivity {
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
-            Fragment fragment = Small.createObject("fragment-v4", sUris[position], MainActivity.this);
+            //Fragment fragment = Small.createObject("fragment-v4", sUris[position], MainActivity.this);
+            Fragment fragment = null;
             if (fragment == null) {
                 fragment = PlaceholderFragment.newInstance(position + 1);
             }

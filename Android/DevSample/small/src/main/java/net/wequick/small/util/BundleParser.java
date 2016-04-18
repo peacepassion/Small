@@ -108,38 +108,26 @@ public class BundleParser {
         mPackageName = packageName;
     }
 
-    public static BundleParser parsePackage(File sourceFile, String packageName) {
-        if (sourceFile == null || !sourceFile.exists()) return null;
-
-        BundleParser bp = new BundleParser(sourceFile, packageName);
-        if (!bp.parsePackage()) return null;
-
-        return bp;
-    }
-
-    public boolean parsePackage() {
+    public void parsePackage() throws BundleParseException {
         AssetManager assmgr = null;
-        boolean assetError = true;
         try {
             assmgr = ReflectAccelerator.newAssetManager();
             int cookie = ReflectAccelerator.addAssetPath(assmgr, mArchiveSourcePath);
             if(cookie != 0) {
                 parser = assmgr.openXmlResourceParser(cookie, "AndroidManifest.xml");
-                assetError = false;
             } else {
-                Log.w(TAG, "Failed adding asset path:"+mArchiveSourcePath);
+                throw new BundleParseException("Failed adding asset path:"+mArchiveSourcePath);
             }
         } catch (Exception e) {
-            Log.w(TAG, "Unable to read AndroidManifest.xml of "
-                    + mArchiveSourcePath, e);
-        }
-        if (assetError) {
-            if (assmgr != null) assmgr.close();
-            return false;
+            throw new BundleParseException("Unable to read AndroidManifest.xml of " + mArchiveSourcePath, e);
         }
 
-        res = new Resources(assmgr, Small.getContext().getResources().getDisplayMetrics(), null);
-        return parsePackage(res, parser);
+        res = new Resources(assmgr, Small.hostApplication().getResources().getDisplayMetrics(), null);
+        parsePackage(res, parser);
+
+        if (!SignUtils.verifyPlugin(mPackageInfo)) {
+            throw new BundleParser.BundleParseException();
+        }
     }
 
     private boolean parsePackage(Resources res, XmlResourceParser parser) {
@@ -172,7 +160,7 @@ public class BundleParser {
                 String tagName = parser.getName();
                 if (tagName.equals("application")) {
                     ApplicationInfo app = new ApplicationInfo(
-                            Small.getContext().getApplicationInfo());
+                            Small.hostApplication().getApplicationInfo());
 
                     sa = res.obtainAttributes(attrs,
                             R.styleable.AndroidManifestApplication);
@@ -553,8 +541,22 @@ public class BundleParser {
     public ConcurrentHashMap<String, List<IntentFilter>> getIntentFilters() {
         return mIntentFilters;
     }
-
-    public int getABIFlags() {
+	
+	public int getABIFlags() {
         return mABIFlags;
+    }
+
+    public static class BundleParseException extends Exception {
+
+        public BundleParseException() {
+        }
+
+        public BundleParseException(String detailMessage) {
+            super(detailMessage);
+        }
+
+        public BundleParseException(String detailMessage, Throwable throwable) {
+            super(detailMessage, throwable);
+        }
     }
 }

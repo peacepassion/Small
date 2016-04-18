@@ -18,6 +18,7 @@ package net.wequick.small.util;
 
 import android.content.Context;
 
+import java.nio.channels.FileChannel;
 import net.wequick.small.Small;
 
 import java.io.File;
@@ -91,7 +92,7 @@ public final class FileUtils {
     }
 
     public static File getInternalFilesPath(String dir) {
-        File file = Small.getContext().getDir(dir, Context.MODE_PRIVATE);
+        File file = Small.hostApplication().getDir(dir, Context.MODE_PRIVATE);
         if (!file.exists()) {
             file.mkdirs();
         }
@@ -100,5 +101,77 @@ public final class FileUtils {
 
     public static File getDownloadBundlePath() {
         return getInternalFilesPath(DOWNLOAD_PATH);
+    }
+
+
+    public static void ensureDir(String dirPath) {
+        File file = new File(dirPath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+    }
+
+    public static void ensureFile(String filePath) {
+        try {
+            File file = new File(filePath);
+            if (!file.exists()) {
+                if (!file.getParentFile().exists()) {
+                    file.getParentFile().mkdirs();
+                }
+                file.createNewFile();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void copyAsset(String srcFileName, File dest) {
+        try {
+            if (!dest.exists()) {
+                dest.createNewFile();
+            }
+            InputStream is = Small.hostApplication().getAssets().open(srcFileName);
+            OutputStream os = new FileOutputStream(dest);
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = is.read(buffer)) != -1) {
+                os.write(buffer, 0, len);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void copyFile(File src, File dest) throws IOException {
+        FileChannel inChannel = null;
+        FileChannel outChannel = null;
+        try {
+            if (!dest.exists()) {
+                dest.createNewFile();
+            }
+            inChannel = new FileInputStream(src).getChannel();
+            outChannel = new FileOutputStream(dest).getChannel();
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+        } finally {
+            if (inChannel != null) {
+                inChannel.close();
+            }
+            if (outChannel != null) {
+                outChannel.close();
+            }
+        }
+    }
+
+    public static boolean deleteFile(File file) {
+        if (!file.exists()) {
+            return true;
+        }
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            for (File f : files) {
+                deleteFile(f);
+            }
+        }
+        return file.delete();
     }
 }

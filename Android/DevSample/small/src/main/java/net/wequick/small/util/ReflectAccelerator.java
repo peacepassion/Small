@@ -54,6 +54,42 @@ public class ReflectAccelerator {
     // ActivityClientRecord
     private static Field sActivityClientRecord_intent_field;
     private static Field sActivityClientRecord_activityInfo_field;
+	
+	private static Instrumentation hostInstrumentation;
+	
+	
+    public static Instrumentation hostInstrumentation()
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+        IllegalAccessException, NoSuchFieldException {
+        if (hostInstrumentation != null) {
+            return hostInstrumentation;
+        }
+        final Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+        final Method method = activityThreadClass.getMethod("currentActivityThread");
+        Object thread = method.invoke(null, (Object[]) null);
+        Field field = activityThreadClass.getDeclaredField("mInstrumentation");
+        field.setAccessible(true);
+        hostInstrumentation = (Instrumentation) field.get(thread);
+        return hostInstrumentation;
+    }
+
+    public static void hookInstrumentation(Instrumentation wrapper, Context context)
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException, NoSuchFieldException {
+        final Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+        final Method method = activityThreadClass.getMethod("currentActivityThread");
+        Object thread = method.invoke(null, (Object[]) null);
+        Field field = activityThreadClass.getDeclaredField("mInstrumentation");
+        field.setAccessible(true);
+        hostInstrumentation = (Instrumentation) field.get(thread);
+        field.set(thread, wrapper);
+
+        if (context instanceof Activity) {
+            field = Activity.class.getDeclaredField("mInstrumentation");
+            field.setAccessible(true);
+            field.set(context, wrapper);
+        }
+    }
 
     private ReflectAccelerator() { /** cannot be instantiated */ }
 

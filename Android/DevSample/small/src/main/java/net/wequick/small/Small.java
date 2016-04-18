@@ -16,307 +16,205 @@
 
 package net.wequick.small;
 
-import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.Application;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-
-import net.wequick.small.util.ApplicationUtils;
-import net.wequick.small.webkit.JsHandler;
-import net.wequick.small.webkit.WebView;
-import net.wequick.small.webkit.WebViewClient;
-
-import org.json.JSONObject;
-
-import java.util.Iterator;
+import android.text.TextUtils;
+import android.util.Log;
+import com.google.gson.Gson;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.SynchronousQueue;
+import net.wequick.small.util.FileUtils;
 
-/**
- * This class consists exclusively of static methods that operate on bundle.
- *
- * <h3>Core APIs</h3>
- * <ul>
- *     <li>{@link #setUp(Context, OnCompleteListener)} resolve the <tt>bundle.json</tt> to setup bundle launchers.</li>
- *     <li>{@link #openUri} launch the bundle with specify activity by the <tt>uri</tt></li>
- *     <li>{@link #createObject} create object from the bundle</li>
- *     <li>{@link #setWebViewClient(WebViewClient)} customize the web view behaviors for web bundle</li>
- *     <li>{@link #registerJsHandler(String, JsHandler)} customize the javascript api for web bundle</li>
- * </ul>
- */
 public final class Small {
 
-    public static final String KEY_QUERY = "small-query";
-    public static final String EXTRAS_KEY_RET = "small-ret";
-    public static final int REQUEST_CODE_DEFAULT = 10000;
+    public static final String LOG_TAG = Small.class.getSimpleName();
+    public static final String KEY_ACTIVITY_URI = "key_activity_uri";
 
-    private static final String SHARED_PREFERENCES_SMALL = "small";
-    private static final String SHARED_PREFERENCES_KEY_VERSION = "version";
-    private static final String SHARED_PREFERENCES_BUNDLE_VERSIONS = "small.app-versions";
-    private static final String SHARED_PREFERENCES_BUNDLE_MODIFIES = "small.app-modifies";
-    private static final String SHARED_PREFERENCES_BUNDLE_UPGRADES = "small.app-upgrades";
+    private static Application hostApplication;
+    private static ApkBundleLauncher apkBundleLauncher;
+    private static List<Bundle> loadedBundles = new ArrayList<>();
+    private static boolean isNewHostApp; // first launched or upgraded
 
-    private static Context sContext = null;
-    private static String sBaseUri = ""; // base url of uri
-    private static boolean sIsNewHostApp; // first launched or upgraded
-    private static int sWebActivityTheme;
-
-    public interface OnCompleteListener {
-        void onComplete();
+    public static Application hostApplication() {
+        return hostApplication;
     }
 
-    public static Context getContext() {
-        return sContext;
+    public static boolean isNewHostApp() {
+        return isNewHostApp;
     }
 
-    public static void setBaseUri(String url) {
-        sBaseUri = url;
+    public static void setup(Application application) throws SmallSetupException {
+        long setupStartTime = 0;
+        if (BuildConfig.DEBUG) {
+            setupStartTime = System.currentTimeMillis();
+        }
+        hostApplication = application;
+        SharedPreferenceManager.init(hostApplication);
+        handleVersionChange();
+        // todo handle bundle update here
+        try {
+            setupBundleLaunchers();
+            loadBundles();
+        } catch (Exception e) {
+            throw new SmallSetupException(e);
+        }
+        if (BuildConfig.DEBUG) {
+            long setupEndTime = System.currentTimeMillis();
+            Log.d(LOG_TAG, "Small setup consumes: " + (setupEndTime - setupStartTime) + " ms");
+        }
     }
 
-    public static String getBaseUri() {
-        return sBaseUri;
-    }
-
-    public static boolean getIsNewHostApp() {
-        return sIsNewHostApp;
-    }
-
-    public static void preSetUp(Application context) {
-        sContext = context;
-
-        // Register default bundle launchers
-        registerLauncher(new ActivityLauncher());
-        registerLauncher(new ApkBundleLauncher());
-        registerLauncher(new WebBundleLauncher());
-
-        PackageManager pm = context.getPackageManager();
-        String packageName = context.getPackageName();
-
+    private static void handleVersionChange() {
         // Check if host app is first-installed or upgraded
-        int backupHostVersion = getHostVersionCode();
+        PackageManager pm = hostApplication.getPackageManager();
+        String packageName = hostApplication.getPackageName();
+        int backupHostVersion = SharedPreferenceManager.getHostVersionCode();
         int currHostVersion = 0;
         try {
             PackageInfo pi = pm.getPackageInfo(packageName, 0);
             currHostVersion = pi.versionCode;
-        } catch (PackageManager.NameNotFoundException ignored) {
-            // Never reach
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
         }
-
         if (backupHostVersion != currHostVersion) {
-            sIsNewHostApp = true;
-            setHostVersionCode(currHostVersion);
+            isNewHostApp = true;
+            SharedPreferenceManager.setHostVersionCode(currHostVersion);
+            clearSmallCache();
         } else {
-            sIsNewHostApp = false;
-        }
-
-        // Check if application is started after unexpected exit (killed in background etc.)
-        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        ComponentName launchingComponent = am.getRunningTasks(1).get(0).topActivity;
-        ComponentName launcherComponent = pm.getLaunchIntentForPackage(packageName).getComponent();
-        if (!launchingComponent.equals(launcherComponent)) {
-            // In this case, system launching the last restored activity instead of our launcher
-            // activity. Call `setUp' synchronously to ensure `Small' available.
-            setUp(context, null);
+            isNewHostApp = false;
         }
     }
 
-    public static void setUp(Context context, OnCompleteListener listener) {
-        if (sContext == null) {
-            // Tips for CODE-BREAKING
-            throw new UnsupportedOperationException(
-                    "Please call `Small.preSetUp' in your application first");
+    private static void clearSmallCache() {
+        File file = new File(FileManager.smallDir());
+        FileUtils.deleteFile(file);
+    }
+
+    private static void setupBundleLaunchers() throws ApkBundleLauncher.LauncherSetupException {
+        apkBundleLauncher = new ApkBundleLauncher();
+        // todo consider remove this step
+        apkBundleLauncher.setup(hostApplication);
+    }
+
+    private static void loadBundles() throws Exception {
+        BundleManifest bundleManifest = parseBundleManifest();
+        doLoadBundles(bundleManifest);
+    }
+
+    // todo handle bundle.json processing
+    // todo handling bundle.json upgrade
+    private static BundleManifest parseBundleManifest() {
+        long parseStartTime = 0;
+        if (BuildConfig.DEBUG) {
+            parseStartTime = System.currentTimeMillis();
         }
-        Bundle.setupLaunchers(context);
-        Bundle.loadLaunchableBundles(listener);
-    }
 
-    public static Bundle getBundle(String bundleName) {
-        return Bundle.findByName(bundleName);
-    }
+        String jsonStr = readBundlesInfo();
+        // Parse manifest file
+        Gson gson = new Gson();
+        BundleManifest bundleManifest = gson.fromJson(jsonStr, BundleManifest.class);
 
-    public static boolean updateManifest(JSONObject manifest, boolean force) {
-        return Bundle.updateManifest(manifest, force);
-    }
-
-    public static void setWebViewClient(WebViewClient client) {
-        WebView.setWebViewClient(client);
-    }
-
-    public static void registerJsHandler(String method, JsHandler handler) {
-        WebView.registerJsHandler(method, handler);
-    }
-
-    public static SharedPreferences getSharedPreferences() {
-        return getContext().getSharedPreferences(SHARED_PREFERENCES_SMALL, 0);
-    }
-
-    public static Map<String, Integer> getBundleVersions() {
-        return (Map<String, Integer>) getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_VERSIONS, 0).getAll();
-    }
-
-    public static int getHostVersionCode() {
-        return getContext().getSharedPreferences(SHARED_PREFERENCES_SMALL, 0).
-                getInt(SHARED_PREFERENCES_KEY_VERSION, 0);
-    }
-
-    public static void setHostVersionCode(int versionCode) {
-        SharedPreferences small = getContext().getSharedPreferences(SHARED_PREFERENCES_SMALL, 0);
-        SharedPreferences.Editor editor = small.edit();
-        editor.putInt(SHARED_PREFERENCES_KEY_VERSION, versionCode);
-        editor.apply();
-    }
-
-    public static void setBundleVersionCode(String bundleName, int versionCode) {
-        SharedPreferences bundlesInfo = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_VERSIONS, 0);
-        SharedPreferences.Editor editor = bundlesInfo.edit();
-        editor.putInt(bundleName, versionCode);
-        editor.apply();
-    }
-
-    public static void setBundleLastModified(String bundleName, long lastModified) {
-        SharedPreferences sp = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_MODIFIES, 0);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putLong(bundleName, lastModified);
-        editor.apply();
-    }
-
-    public static long getBundleLastModified(String bundleName) {
-        SharedPreferences sp = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_MODIFIES, 0);
-        if (sp == null) return 0;
-        return sp.getLong(bundleName, 0);
-    }
-
-    public static void setBundleUpgraded(String bundleName, boolean flag) {
-        SharedPreferences sp = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_UPGRADES, 0);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean(bundleName, flag);
-        editor.apply();
-    }
-
-    public static boolean getBundleUpgraded(String bundleName) {
-        SharedPreferences sp = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_UPGRADES, 0);
-        if (sp == null) return false;
-        return sp.getBoolean(bundleName, false);
-    }
-
-    public static boolean isUpgrading() {
-        SharedPreferences sp = getContext().
-                getSharedPreferences(SHARED_PREFERENCES_BUNDLE_UPGRADES, 0);
-        Map<String, Boolean> flags = (Map<String, Boolean>) sp.getAll();
-        if (flags == null) return false;
-        Iterator<Map.Entry<String, Boolean>> it = flags.entrySet().iterator();
-        while (it.hasNext()) {
-            Boolean flag = it.next().getValue();
-            if (flag != null && flag) return true;
+        if (BuildConfig.DEBUG) {
+            long parseEndTime = System.currentTimeMillis();
+            Log.d(LOG_TAG, "parse manifest consumes: " + (parseEndTime - parseStartTime) + " ms");
         }
-        return false;
+
+        return bundleManifest;
     }
 
-    public static void openUri(String uriString, Context context) {
-        openUri(makeUri(uriString), context);
+    private static String readBundlesInfo() {
+        File manifestFile = new File(FileManager.smallBundleManifestDir(), FileManager.BUNDLE_MANIFEST_NAME);
+        manifestFile.delete();
+        FileUtils.ensureFile(manifestFile.getAbsolutePath());
+        String manifestJson = null;
+        // Copy asset to files
+        try {
+            InputStream is = hostApplication.getAssets().open(FileManager.BUNDLE_MANIFEST_NAME);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+
+            FileOutputStream os = new FileOutputStream(manifestFile);
+            os.write(buffer);
+            os.close();
+
+            manifestJson = new String(buffer, 0, size);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return manifestJson;
     }
 
-    public static void openUri(Uri uri, Context context) {
-        // System url schemes
-        String scheme = uri.getScheme();
-        if (scheme != null
-                && !scheme.equals("http")
-                && !scheme.equals("https")
-                && !scheme.equals("file")
-                && ApplicationUtils.canOpenUri(uri, context)) {
-            ApplicationUtils.openUri(uri, context);
+    private static void doLoadBundles(BundleManifest bundleManifest) throws Exception {
+        List<BundleManifest.BundleInfo> bundleInfoList = bundleManifest.bundleInfoList();
+        Exception exception = null;
+        for (BundleManifest.BundleInfo bundleInfo : bundleInfoList) {
+            try {
+                long loadStartTime = 0;
+                if (BuildConfig.DEBUG) {
+                    loadStartTime = System.currentTimeMillis();
+                }
+
+                Bundle bundle = new Bundle(bundleInfo, apkBundleLauncher);
+                loadedBundles.add(bundle);
+
+                if (BuildConfig.DEBUG) {
+                    Log.d(LOG_TAG, "bundle loaded: " + bundleInfo);
+                    long loadEndTime = System.currentTimeMillis();
+                    Log.d(LOG_TAG, "load bundle " + bundleInfo.packageName() + " consumes: " + (loadEndTime - loadStartTime) + " ms");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                exception = e;
+            }
+        }
+
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    // todo integrate with scheme
+    public static void launchBundleActivity(Intent intent, Context context) {
+        String uriStr = intent.getStringExtra(KEY_ACTIVITY_URI);
+        if (TextUtils.isEmpty(uriStr)) {
+            throw new IllegalArgumentException("intent must contain a valid key value of Small#KEY_ACTIVITY_URI");
+        }
+        Bundle bundle = findTargetBundle(uriStr);
+        if (bundle == null) {
+            Log.w(LOG_TAG, "fail to find target bundle for uri: " + uriStr);
             return;
         }
-
-        // Small url schemes
-        Bundle bundle = Bundle.getLaunchableBundle(uri);
-        if (bundle != null) {
-            bundle.launchFrom(context);
+        try {
+            Class target = bundle.getTargetClass(uriStr);
+            apkBundleLauncher.launchActivity(target, intent, context);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
-    public static Intent getIntentOfUri(String uriString, Context context) {
-        return getIntentOfUri(makeUri(uriString), context);
-    }
-
-    public static Intent getIntentOfUri(Uri uri, Context context) {
-        // System url schemes
-        if (!uri.getScheme().equals("http")
-                && !uri.getScheme().equals("https")
-                && !uri.getScheme().equals("file")
-                && ApplicationUtils.canOpenUri(uri, context)) {
-            return ApplicationUtils.getIntentOfUri(uri);
-        }
-
-        // Small url schemes
-        Bundle bundle = Bundle.getLaunchableBundle(uri);
-        if (bundle != null) {
-            return bundle.createIntent(context);
+    // todo check the
+    private static Bundle findTargetBundle(String uriStr) {
+        for (Bundle bundle : loadedBundles) {
+            if (bundle.isTarget(uriStr)) {
+                return bundle;
+            }
         }
         return null;
     }
 
-    public static <T> T createObject(String type, String uriString, Context context) {
-        return createObject(type, makeUri(uriString), context);
-    }
-
-    public static <T> T createObject(String type, Uri uri, Context context) {
-        Bundle bundle = Bundle.getLaunchableBundle(uri);
-        if (bundle != null) {
-            return bundle.createObject(context, type);
+    public static class SmallSetupException extends Exception {
+        public SmallSetupException(Throwable throwable) {
+            super(throwable);
         }
-        return null;
-    }
-
-    public static Uri getUri(Activity context) {
-        android.os.Bundle extras = context.getIntent().getExtras();
-        if (extras == null) {
-            return null;
-        }
-        String query = extras.getString(KEY_QUERY);
-        if (query == null) {
-            return null;
-        }
-        return Uri.parse(query);
-    }
-
-    public static List<Bundle> getBundles() {
-        return Bundle.getLaunchableBundles();
-    }
-
-    public static void registerLauncher(BundleLauncher launcher) {
-        Bundle.registerLauncher(launcher);
-    }
-
-    public static int getWebActivityTheme() {
-        return sWebActivityTheme;
-    }
-
-    public static void setWebActivityTheme(int webActivityTheme) {
-        sWebActivityTheme = webActivityTheme;
-    }
-
-    //______________________________________________________________________________________________
-    // Private
-
-    private static Uri makeUri(String uriString) {
-        if (!uriString.startsWith("http://")
-                && !uriString.startsWith("https://")
-                && !uriString.startsWith("file://")) {
-            uriString = sBaseUri + uriString;
-        }
-        return Uri.parse(uriString);
     }
 }

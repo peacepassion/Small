@@ -1,5 +1,6 @@
 package net.wequick.example.small;
 
+import android.content.Intent;
 import android.os.Build;
 import android.support.v7.app.ActionBar;
 import android.os.Bundle;
@@ -37,21 +38,22 @@ public class LaunchActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
-        if (Small.getIsNewHostApp()) {
+        if (Small.isNewHostApp()) {
             TextView tvPrepare = (TextView) findViewById(R.id.prepare_text);
             tvPrepare.setVisibility(View.VISIBLE);
         }
+
+        mContentView.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.putExtra(Small.KEY_ACTIVITY_URI, "main");
+                Small.launchBundleActivity(intent, LaunchActivity.this);
+            }
+        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        Small.setUp(this, new net.wequick.small.Small.OnCompleteListener() {
-            @Override
-            public void onComplete() {
-                Small.openUri("main", LaunchActivity.this);
-                finish();
-            }
-        });
     }
 }

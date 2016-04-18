@@ -10,10 +10,11 @@ public class Application extends android.app.Application {
     public void onCreate() {
         super.onCreate();
 
-        // Options
-        Small.setBaseUri("http://m.wequick.net/demo/");
+        try {
+            Small.setup(this);
+        } catch (Small.SmallSetupException e) {
+            e.printStackTrace();
+        }
 
-        // Required
-        Small.preSetUp(this);
     }
 }
