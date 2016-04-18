@@ -40,7 +40,7 @@ class RootPlugin extends BasePlugin {
             if (it.name == 'app') {
                 // Host
                 it.apply plugin: HostPlugin
-                rootExt.outputBundleDir = new File(it.projectDir, SMALL_LIBS)
+                rootExt.outputBundleDir = new File(it.projectDir, SMALL_BUNDLE_OUTPUT_DIR)
             } else {
                 def idx = it.name.indexOf('.')
                 if (idx < 0) return // Small bundle should has a name with format "$type.$name"

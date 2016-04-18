@@ -27,7 +27,7 @@ import org.gradle.logging.StyledTextOutputFactory
 public abstract class BasePlugin implements Plugin<Project> {
 
     public static final String SMALL_AAR_PREFIX = "net.wequick.small:small:"
-    public static final String SMALL_LIBS = 'smallLibs'
+    public static final String SMALL_BUNDLE_OUTPUT_DIR = 'src/main/assets'
 
     protected boolean isBuildingBundle
     protected boolean isBuildingLib

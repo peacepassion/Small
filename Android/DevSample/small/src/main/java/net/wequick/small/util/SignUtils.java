@@ -39,7 +39,7 @@ public class SignUtils {
      * @return <tt>true</tt> if the <tt>plugin</tt> signatures same with the host's.
      */
     public static boolean verifyPlugin(File plugin) {
-        PackageManager pm = Small.getContext().getPackageManager();
+        PackageManager pm = Small.hostApplication().getPackageManager();
         PackageInfo pluginInfo = pm.getPackageArchiveInfo(plugin.getPath(),
                 PackageManager.GET_SIGNATURES);
         return verifyPlugin(pluginInfo);
@@ -48,10 +48,10 @@ public class SignUtils {
     public static boolean verifyPlugin(PackageInfo pluginInfo) {
         if (!sHostSigned) return true;
 
-        PackageManager pm = Small.getContext().getPackageManager();
+        PackageManager pm = Small.hostApplication().getPackageManager();
         if (sHostSignatures == null) {
             try {
-                sHostSignatures = pm.getPackageInfo(Small.getContext().getPackageName(),
+                sHostSignatures = pm.getPackageInfo(Small.hostApplication().getPackageName(),
                         PackageManager.GET_SIGNATURES).signatures;
             } catch (PackageManager.NameNotFoundException ignored) {
                 sHostSigned = false;

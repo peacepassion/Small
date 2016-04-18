@@ -32,6 +32,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,8 @@ public class ReflectAccelerator {
     private static Field sActivityClientRecord_intent_field;
     private static Field sActivityClientRecord_activityInfo_field;
 
+    private static Instrumentation hostInstrumentation;
+
     private ReflectAccelerator() { /** cannot be instantiated */ }
 
     //______________________________________________________________________________________________
@@ -81,6 +84,39 @@ public class ReflectAccelerator {
         Integer ret = invoke(sAddAssetPath, assets, path);
         if (ret == null) return 0;
         return ret;
+    }
+
+    public static Instrumentation hostInstrumentation()
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+        IllegalAccessException, NoSuchFieldException {
+        if (hostInstrumentation != null) {
+            return hostInstrumentation;
+        }
+        final Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+        final Method method = activityThreadClass.getMethod("currentActivityThread");
+        Object thread = method.invoke(null, (Object[]) null);
+        Field field = activityThreadClass.getDeclaredField("mInstrumentation");
+        field.setAccessible(true);
+        hostInstrumentation = (Instrumentation) field.get(thread);
+        return hostInstrumentation;
+    }
+
+    public static void hookInstrumentation(Instrumentation wrapper, Context context)
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException, NoSuchFieldException {
+        final Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+        final Method method = activityThreadClass.getMethod("currentActivityThread");
+        Object thread = method.invoke(null, (Object[]) null);
+        Field field = activityThreadClass.getDeclaredField("mInstrumentation");
+        field.setAccessible(true);
+        hostInstrumentation = (Instrumentation) field.get(thread);
+        field.set(thread, wrapper);
+
+        if (context instanceof Activity) {
+            field = Activity.class.getDeclaredField("mInstrumentation");
+            field.setAccessible(true);
+            field.set(context, wrapper);
+        }
     }
 
     //______________________________________________________________________________________________

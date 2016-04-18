@@ -21,14 +21,14 @@ public class MainActivity extends AppCompatActivity {
         setTitle("Detail");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        Uri uri = Small.getUri(this);
-        if (uri != null) {
-            String from = uri.getQueryParameter("from");
-            if (from != null) {
-                TextView tvFrom = (TextView) findViewById(R.id.tvFrom);
-                tvFrom.setText("-- Greet from " + from);
-            }
-        }
+        //Uri uri = Small.getUri(this);
+        //if (uri != null) {
+        //    String from = uri.getQueryParameter("from");
+        //    if (from != null) {
+        //        TextView tvFrom = (TextView) findViewById(R.id.tvFrom);
+        //        tvFrom.setText("-- Greet from " + from);
+        //    }
+        //}
     }
 
     @Override
