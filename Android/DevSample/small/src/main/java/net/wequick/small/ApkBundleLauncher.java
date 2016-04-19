@@ -46,12 +46,18 @@ public class ApkBundleLauncher {
 
     private Instrumentation hostInstrumentation;
 
-    public void setup(Context context) throws LauncherSetupException {
+    private ApkBundleLauncher() {
+    }
+
+    public static ApkBundleLauncher setup(Context context) throws LauncherSetupException {
+        ApkBundleLauncher apkBundleLauncher;
         try {
-            hook(context);
+            apkBundleLauncher = new ApkBundleLauncher();
+            apkBundleLauncher.hook(context);
         } catch (Exception e) {
           throw new LauncherSetupException("fail to setup launcher", e);
         }
+        return apkBundleLauncher;
     }
 
     private void hook(Context context)
