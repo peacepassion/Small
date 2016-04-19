@@ -92,7 +92,17 @@ class RootPlugin extends BasePlugin {
         project.task('buildLib', group: 'small', description: 'Build all libraries').doFirst {
             buildingLibIndex = 1
         }
-        project.task('cleanBundle', group: 'small', description: 'Clean all bundles')
+        project.task('cleanBundle', group: 'small', description: 'Clean all bundles').doLast {
+            File[] files = small.outputBundleDir.listFiles(new FileFilter() {
+                @Override
+                boolean accept(File pathname) {
+                    return pathname.getName().endsWith('.bundle')
+                }
+            })
+            files.each {
+                it.delete()
+            }
+        }
         project.task('buildBundle', group: 'small', description: 'Build all bundles')
     }
 
