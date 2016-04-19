@@ -93,8 +93,8 @@ public final class Small {
     }
 
     private static void clearSmallCache() {
-        File file = new File(FileManager.smallDir());
-        FileUtils.deleteFile(file);
+        File dir = FileManager.smallDir();
+        FileUtils.deleteFile(dir);
     }
 
     private static void loadBundles() throws Exception {

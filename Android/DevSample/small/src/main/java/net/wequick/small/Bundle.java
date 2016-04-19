@@ -57,10 +57,8 @@ public class Bundle {
             throw new IllegalArgumentException("pkg in Bundle.json cannot be empty");
         }
 
-        String bundlePath = FileManager.smallBundlesDir();
-        FileUtils.ensureDir(bundlePath);
         String bundleName = packageName.replaceAll("\\.", "_") + ".bundle";
-        bundleFile = new File(bundlePath, bundleName);
+        bundleFile = new File(FileManager.smallBundlesDir(), bundleName);
 
         if (Small.isNewHostApp()) {
             FileUtils.copyAsset(bundleName, bundleFile);
@@ -85,8 +83,8 @@ public class Bundle {
         loadedApk.activities = pluginInfo.activities;
 
         // Add dex element to class loader's pathList
-        File packagePath = new File(new File(FileManager.smallOptDexDir()), packageName);
-        FileUtils.ensureDir(packagePath.getAbsolutePath());
+        File packagePath = new File(FileManager.smallOptDexDir(), packageName);
+        FileUtils.ensureDir(packagePath);
         File optDexFile = new File(packagePath, FILE_DEX);
 
         // todo handle upgrade
@@ -102,11 +100,11 @@ public class Bundle {
 
         // Expand the native library directories if plugin has any JNIs. (#79)
         int abiFlags = bundleParser.getABIFlags();
-        String abiPath = JNIUtils.getExtractABI(abiFlags, FileManager.libDir().contains("64"));
+        String abiPath = JNIUtils.getExtractABI(abiFlags, FileManager.libDir().getName().contains("64"));
         if (abiPath != null) {
             String libDir = FileManager.libDir() + File.separator + abiPath + File.separator;
-            FileUtils.ensureDir(libDir);
             File libPath = new File(libDir);
+            FileUtils.ensureDir(libPath);
             try {
                 // Extract the JNIs with specify ABI
                 FileUtils.unZipFolder(new File(apkPath), packagePath, libDir);

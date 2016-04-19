@@ -104,10 +104,9 @@ public final class FileUtils {
     }
 
 
-    public static void ensureDir(String dirPath) {
-        File file = new File(dirPath);
-        if (!file.exists()) {
-            file.mkdirs();
+    public static void ensureDir(File dir) {
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
     }
 
