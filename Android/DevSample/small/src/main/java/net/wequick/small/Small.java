@@ -179,7 +179,7 @@ public final class Small {
         }
 
         if (BuildConfig.DEBUG) {
-            Log.w(LOG_TAG, "version code in the upgraded bundle is small than working bundle");
+            Log.w(LOG_TAG, "version code in the upgraded bundle must be bigger than working bundle");
         }
 
         return false;
