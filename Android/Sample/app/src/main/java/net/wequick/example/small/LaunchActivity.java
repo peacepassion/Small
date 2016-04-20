@@ -48,6 +48,7 @@ public class LaunchActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.putExtra(Small.KEY_ACTIVITY_URI, "main");
                 Small.launchBundleActivity(intent, LaunchActivity.this);
+                LaunchActivity.this.finish();
             }
         });
     }

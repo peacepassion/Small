@@ -164,6 +164,31 @@ public class MainActivity extends AppCompatActivity {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
             TextView textView = (TextView) rootView.findViewById(R.id.section_label);
             textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+
+            rootView.findViewById(R.id.home).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.putExtra(Small.KEY_ACTIVITY_URI, "home");
+                    Small.launchBundleActivity(intent, getActivity());
+                }
+            });
+
+            rootView.findViewById(R.id.mine).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.putExtra(Small.KEY_ACTIVITY_URI, "mine");
+                    Small.launchBundleActivity(intent, getActivity());
+                }
+            });
+
+            rootView.findViewById(R.id.detail).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.putExtra(Small.KEY_ACTIVITY_URI, "detail");
+                    Small.launchBundleActivity(intent, getActivity());
+                }
+            });
+
             return rootView;
         }
     }
