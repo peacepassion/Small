@@ -98,10 +98,10 @@ public class Bundle {
 
         // Expand the native library directories if plugin has any JNIs. (#79)
         int abiFlags = bundleParser.getABIFlags();
-        String abiPath = JNIUtils.getExtractABI(abiFlags, FileManager.libDir().getName().contains("64"));
+        String abiPath = JNIUtils.getExtractABI(abiFlags, Small.hostApplication().getApplicationInfo().nativeLibraryDir.contains("64"));
         if (abiPath != null) {
-            String libDir = FileManager.libDir() + File.separator + abiPath + File.separator;
-            File libPath = new File(libDir);
+            String libDir = "lib" + File.separator + abiPath + File.separator;
+            File libPath = new File(packagePath, libDir);
             FileUtils.ensureDir(libPath);
             try {
                 // Extract the JNIs with specify ABI
@@ -166,128 +166,4 @@ public class Bundle {
         }
     }
 
-    //public Intent getIntent() { return mIntent; }
-    //public void setIntent(Intent intent) { mIntent = intent; }
-    //
-    //public String getPackageName() {
-    //    return mPackageName;
-    //}
-    //
-    //public Uri getUri() {
-    //    return uri;
-    //}
-    //
-    //public void setURL(URL url) {
-    //    this.url = url;
-    //}
-    //
-    //public URL getURL() {
-    //    return url;
-    //}
-    //
-    //public File getBuiltinFile() {
-    //    return bundleFile;
-    //}
-    //
-    //public File getPatchFile() {
-    //    return mPatchFile;
-    //}
-    //
-    //public void setPatchFile(File file) {
-    //    mPatchFile = file;
-    //}
-    //
-    //public String getType() {
-    //    return type;
-    //}
-    //
-    //public void setType(String type) {
-    //    this.type = type;
-    //}
-    //
-    //public String getQuery() {
-    //    return query;
-    //}
-    //
-    //public void setQuery(String query) {
-    //    this.query = query;
-    //}
-    //
-    //public String getPath() {
-    //    return path;
-    //}
-    //
-    //public void setPath(String path) {
-    //    this.path = path;
-    //}
-    //
-    //public boolean isLaunchable() {
-    //    return launchable && enabled;
-    //}
-    //
-    //public void setLaunchable(boolean flag) {
-    //    this.launchable = flag;
-    //}
-    //
-    //public <T> T createObject(Context context, String type) {
-    //    if (mApplicableLauncher == null) {
-    //        setup();
-    //    }
-    //    if (mApplicableLauncher == null) return null;
-    //    return mApplicableLauncher.createObject(this, context, type);
-    //}
-    //
-    //public boolean isEnabled() {
-    //    return enabled;
-    //}
-    //
-    //public void setEnabled(boolean enabled) {
-    //    this.enabled = enabled;
-    //}
-    //
-    //public boolean isPatching() {
-    //    return patching;
-    //}
-    //
-    //public void setPatching(boolean patching) {
-    //    this.patching = patching;
-    //}
-    //
-    //public BundleParser getBundleParser() {
-    //    return bundleParser;
-    //}
-    //
-    //public void setBundleParser(BundleParser bundleParser) {
-    //    this.bundleParser = bundleParser;
-    //}
-    //
-    //public static void setBundleLastModified(String bundleName, long lastModified) {
-    //    SharedPreferences sp = hostApplication.
-    //        getSharedPreferences(SHARED_PREFERENCES_BUNDLE_MODIFIES, 0);
-    //    SharedPreferences.Editor editor = sp.edit();
-    //    editor.putLong(bundleName, lastModified);
-    //    editor.commit();
-    //}
-    //
-    //public static long getBundleLastModified(String bundleName) {
-    //    SharedPreferences sp = hostApplication.
-    //        getSharedPreferences(SHARED_PREFERENCES_BUNDLE_MODIFIES, 0);
-    //    if (sp == null) return 0;
-    //    return sp.getLong(bundleName, 0);
-    //}
-    //
-    //public static void setBundleUpgraded(String bundleName, boolean flag) {
-    //    SharedPreferences sp = hostApplication.
-    //        getSharedPreferences(SHARED_PREFERENCES_BUNDLE_UPGRADES, 0);
-    //    SharedPreferences.Editor editor = sp.edit();
-    //    editor.putBoolean(bundleName, flag);
-    //    editor.commit();
-    //}
-    //
-    //public static boolean getBundleUpgraded(String bundleName) {
-    //    SharedPreferences sp = hostApplication.
-    //        getSharedPreferences(SHARED_PREFERENCES_BUNDLE_UPGRADES, 0);
-    //    if (sp == null) return false;
-    //    return sp.getBoolean(bundleName, false);
-    //}
 }

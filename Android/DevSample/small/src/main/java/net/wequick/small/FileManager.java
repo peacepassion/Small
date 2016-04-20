@@ -47,11 +47,4 @@ public final class FileManager {
     FileUtils.ensureDir(dir);
     return dir;
   }
-
-  // todo // FIXME: 16/4/19
-  public static File libDir() {
-    File dir = new File(Small.hostApplication().getApplicationInfo().nativeLibraryDir);
-    FileUtils.ensureDir(dir);
-    return dir;
-  }
 }
