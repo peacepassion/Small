@@ -6,15 +6,20 @@ import java.util.Map;
 
 public class BundleManifest {
 
-  @SerializedName("version") private String version;
+  @SerializedName("version_name") private String versionName;
+  @SerializedName("version_code") private int versionCode;
   @SerializedName("bundles") private List<BundleInfo> bundleInfoList;
 
   public List<BundleInfo> bundleInfoList() {
     return bundleInfoList;
   }
 
-  public String version() {
-    return version;
+  public String versionName() {
+    return versionName;
+  }
+
+  public int versionCode() {
+    return versionCode;
   }
 
   public static class BundleInfo {

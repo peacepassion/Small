@@ -25,11 +25,15 @@ import android.text.TextUtils;
 import android.util.Log;
 import com.google.gson.Gson;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import net.wequick.small.util.FileUtils;
 
 public final class Small {
@@ -41,6 +45,9 @@ public final class Small {
     private static ApkBundleLauncher apkBundleLauncher;
     private static List<Bundle> loadedBundles = new ArrayList<>();
     private static boolean isNewHostApp; // first launched or upgraded
+    private static boolean bundleUpdated;
+    private static BundleManifest loadedBundleManifest;
+    private static Gson gson = new Gson();
 
     public static Application hostApplication() {
         return hostApplication;
@@ -50,17 +57,22 @@ public final class Small {
         return isNewHostApp;
     }
 
+    public static boolean bundleUpdated() {
+        return bundleUpdated;
+    }
+
     public static void setup(Application application) throws SmallSetupException {
         long setupStartTime = 0;
         if (BuildConfig.DEBUG) {
             setupStartTime = System.currentTimeMillis();
         }
-        hostApplication = application;
-        SharedPreferenceManager.init(hostApplication);
-        handleVersionChange();
-        // todo handle bundle update here
         try {
+            hostApplication = application;
+            SharedPreferenceManager.init(hostApplication);
+            handleVersionChange();
             apkBundleLauncher = ApkBundleLauncher.setup(hostApplication);
+            parseBundleManifest();
+            handleUpgrade();
             loadBundles();
         } catch (Exception e) {
             throw new SmallSetupException(e);
@@ -97,57 +109,127 @@ public final class Small {
         FileUtils.deleteFile(dir);
     }
 
-    private static void loadBundles() throws Exception {
-        BundleManifest bundleManifest = parseBundleManifest();
-        doLoadBundles(bundleManifest);
+  private static void handleUpgrade() {
+      File upgradeDir = FileManager.smallUpgradeDir();
+      File upgradeJar = new File(upgradeDir, FileManager.SMALL_UPGRADE_JAR);
+      if (!upgradeJar.exists()) {
+          return;
+      }
+      // todo check security at first
+      try {
+          JarFile jarFile = new JarFile(upgradeJar);
+          if (!checkUpgradeJarVersion(jarFile)) {
+              upgradeJar.delete();
+              return;
+          }
+
+          // extract the content to the working directory
+          Enumeration<JarEntry> entries = jarFile.entries();
+          while (entries.hasMoreElements()) {
+              JarEntry entry = entries.nextElement();
+              String name = entry.getName();
+              File dest = null;
+              if (name.equals(FileManager.BUNDLE_MANIFEST_NAME)) {
+                  dest = new File(FileManager.smallWorkingDir(), FileManager.BUNDLE_MANIFEST_NAME);
+              } else if (name.endsWith(".bundle")) {
+                  dest = new File(FileManager.smallBundlesDir(), name);
+              }
+              if (dest != null) {
+                  if (dest.exists()) {
+                      dest.delete();
+                  }
+                  FileUtils.ensureFile(dest);
+                  FileOutputStream fos = new FileOutputStream(dest);
+                  InputStream is = jarFile.getInputStream(entry);
+                  byte[] buffer = new byte[is.available()];
+                  is.read(buffer);
+                  fos.write(buffer);
+                  is.close();
+                  fos.close();
+              }
+          }
+
+          bundleUpdated = true;
+
+          // delete upgrade package
+          FileUtils.deleteFile(upgradeJar);
+      } catch (IOException e) {
+          e.printStackTrace();
+      }
+
+      // parse bundle manifest again
+      parseBundleManifest();
     }
 
-    // todo handling bundle.json upgrade
-    private static BundleManifest parseBundleManifest() {
+    private static boolean checkUpgradeJarVersion(JarFile upgradeJar) throws IOException {
+        Enumeration<JarEntry> entries = upgradeJar.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            String name = entry.getName();
+            if (name.equals(FileManager.BUNDLE_MANIFEST_NAME)) {
+                InputStream is = upgradeJar.getInputStream(entry);
+                byte[] buffer = new byte[is.available()];
+                is.read(buffer);
+                String content = new String(buffer);
+                BundleManifest bundleManifest = gson.fromJson(content, BundleManifest.class);
+                if (bundleManifest.versionCode() > loadedBundleManifest.versionCode()) {
+                    return true;
+                }
+            }
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.w(LOG_TAG, "version code in the upgraded bundle is small than working bundle");
+        }
+
+        return false;
+    }
+
+    private static void parseBundleManifest() {
         long parseStartTime = 0;
         if (BuildConfig.DEBUG) {
             parseStartTime = System.currentTimeMillis();
         }
 
-        String jsonStr = readBundlesInfo();
-        // Parse manifest file
-        Gson gson = new Gson();
-        BundleManifest bundleManifest = gson.fromJson(jsonStr, BundleManifest.class);
-
-        if (BuildConfig.DEBUG) {
-            long parseEndTime = System.currentTimeMillis();
-            Log.d(LOG_TAG, "parse manifest consumes: " + (parseEndTime - parseStartTime) + " ms");
-        }
-
-        return bundleManifest;
-    }
-
-    private static String readBundlesInfo() {
+        String jsonStr = null;
         File manifestFile = new File(FileManager.smallBundleManifestDir(), FileManager.BUNDLE_MANIFEST_NAME);
-        manifestFile.delete();
-        FileUtils.ensureFile(manifestFile.getAbsolutePath());
-        String manifestJson = null;
-        // Copy asset to files
         try {
-            InputStream is = hostApplication.getAssets().open(FileManager.BUNDLE_MANIFEST_NAME);
+            InputStream is;
+            if (manifestFile.exists()) {
+                is = new FileInputStream(manifestFile);
+            } else {
+                // Copy asset to files
+                is = hostApplication.getAssets().open(FileManager.BUNDLE_MANIFEST_NAME);
+            }
+
             int size = is.available();
             byte[] buffer = new byte[size];
             is.read(buffer);
             is.close();
 
-            FileOutputStream os = new FileOutputStream(manifestFile);
-            os.write(buffer);
-            os.close();
+            if (!manifestFile.exists()) {
+                FileUtils.ensureFile(manifestFile);
+                FileOutputStream os = new FileOutputStream(manifestFile);
+                os.write(buffer);
+                os.close();
+            }
 
-            manifestJson = new String(buffer, 0, size);
+            jsonStr = new String(buffer, 0, size);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return manifestJson;
+
+        // Parse manifest file
+        loadedBundleManifest = gson.fromJson(jsonStr, BundleManifest.class);
+
+        if (BuildConfig.DEBUG) {
+            long parseEndTime = System.currentTimeMillis();
+            Log.d(LOG_TAG, "parse manifest consumes: " + (parseEndTime - parseStartTime) + " ms");
+        }
     }
 
-    private static void doLoadBundles(BundleManifest bundleManifest) throws Exception {
-        List<BundleManifest.BundleInfo> bundleInfoList = bundleManifest.bundleInfoList();
+    private static void loadBundles() throws Exception {
+        List<BundleManifest.BundleInfo> bundleInfoList = loadedBundleManifest.bundleInfoList();
         Exception exception = null;
         for (BundleManifest.BundleInfo bundleInfo : bundleInfoList) {
             try {

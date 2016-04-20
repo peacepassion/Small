@@ -1,0 +1,97 @@
+apply plugin: 'com.android.application'
+android {
+  signingConfigs {
+    release {
+      storeFile file('/Users/xx.keystore')
+      keyAlias 'xx'
+      keyPassword 'xx'
+      storePassword 'xx'
+    }
+  }
+  buildTypes {
+    release {
+      buildConfigField STRING, HOST, HOST_PRODUCTION_VALUE
+      buildConfigField STRING, WEB_HOST, WEB_HOST_PRODUCTION_VALUE
+      buildConfigField BOOLEAN, ALLOW_HTTPS, TRUE
+      buildConfigField STRING, CONSUMER, CONSUMER_VALUE
+      buildConfigField STRING, WEIXIN_APP_ID, WEIXIN_APP_ID_VALUE
+      buildConfigField STRING, WEIBO_APP_ID, WEIBO_APP_ID_VALUE
+      buildConfigField BOOLEAN, SHOW_VERSION_GUIDE, FALSE
+      debuggable false
+      signingConfig signingConfigs.release
+      minifyEnabled true
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+      zipAlignEnabled true
+    }
+    production {
+      buildConfigField STRING, HOST, HOST_PRODUCTION_VALUE
+      buildConfigField STRING, WEB_HOST, WEB_HOST_PRODUCTION_VALUE
+      buildConfigField BOOLEAN, ALLOW_HTTPS, TRUE
+      buildConfigField STRING, CONSUMER, CONSUMER_VALUE
+      buildConfigField STRING, WEIXIN_APP_ID, WEIXIN_APP_ID_VALUE
+      buildConfigField STRING, WEIBO_APP_ID, WEIBO_APP_ID_VALUE
+      buildConfigField BOOLEAN, SHOW_VERSION_GUIDE, FALSE
+      debuggable true
+      signingConfig signingConfigs.release
+      zipAlignEnabled false
+    }
+    ceshiNormal {
+      buildConfigField STRING, HOST, HOST_TEST_VALUE
+      buildConfigField STRING, WEB_HOST, WEB_HOST_TEST_VALUE
+      buildConfigField BOOLEAN, ALLOW_HTTPS, TRUE
+      buildConfigField STRING, CONSUMER, CONSUMER_VALUE
+      buildConfigField STRING, WEIXIN_APP_ID, WEIXIN_APP_ID_VALUE
+      buildConfigField STRING, WEIBO_APP_ID, WEIBO_APP_ID_VALUE
+      buildConfigField BOOLEAN, SHOW_VERSION_GUIDE, FALSE
+      debuggable true
+      signingConfig signingConfigs.release
+      zipAlignEnabled false
+    }
+    ceshiProguard {
+      buildConfigField STRING, HOST, HOST_TEST_VALUE
+      buildConfigField STRING, WEB_HOST, WEB_HOST_TEST_VALUE
+      buildConfigField BOOLEAN, ALLOW_HTTPS, TRUE
+      buildConfigField STRING, CONSUMER, CONSUMER_VALUE
+      buildConfigField STRING, WEIXIN_APP_ID, WEIXIN_APP_ID_VALUE
+      buildConfigField STRING, WEIBO_APP_ID, WEIBO_APP_ID_VALUE
+      buildConfigField BOOLEAN, SHOW_VERSION_GUIDE, FALSE
+      debuggable true
+      signingConfig signingConfigs.release
+      minifyEnabled true
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+      zipAlignEnabled true
+    }
+    stage {
+      buildConfigField STRING, HOST, HOST_STAGING_VALUE
+      buildConfigField STRING, WEB_HOST, WEB_HOST_STAGING_VALUE
+      buildConfigField BOOLEAN, ALLOW_HTTPS, TRUE
+      buildConfigField STRING, CONSUMER, CONSUMER_VALUE
+      buildConfigField STRING, WEIXIN_APP_ID, WEIXIN_APP_ID_VALUE
+      buildConfigField STRING, WEIBO_APP_ID, WEIBO_APP_ID_VALUE
+      buildConfigField BOOLEAN, SHOW_VERSION_GUIDE, FALSE
+      debuggable true
+      signingConfig signingConfigs.release
+      zipAlignEnabled false
+    }
+  }
+  sourceSets {
+    "360" {
+      res.srcDirs = ['src/variant/360/res']
+    }
+    baidu {
+      res.srcDirs = ['src/variant/baidu/res']
+    }
+    production {
+      jniLibs.srcDirs = ['src/variant/release/jniLibs']
+    }
+    stage {
+      jniLibs.srcDirs = ['src/variant/release/jniLibs']
+    }
+    ceshiNormal {
+      jniLibs.srcDirs = ['src/variant/release/jniLibs']
+    }
+    ceshiProguard {
+      jniLibs.srcDirs = ['src/variant/release/jniLibs']
+    }
+  }
+}

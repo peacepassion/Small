@@ -26,16 +26,17 @@ android {
 
     // Signing
     signingConfigs {
-        release {
-            storeFile file('../sign/release.jks')
-            storePassword "5mall@ndro!d"
-            keyAlias "small"
-            keyPassword "5mall@ndro!d"
+        debug {
+            storeFile file("./doc/debug.keystore")
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storePassword 'android'
         }
     }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
         }
     }
 

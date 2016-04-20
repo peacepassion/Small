@@ -87,12 +87,10 @@ public class Bundle {
         FileUtils.ensureDir(packagePath);
         File optDexFile = new File(packagePath, FILE_DEX);
 
-        // todo handle upgrade
-        //if (Small.getBundleUpgraded(packageName)) {
-        //    // If upgraded, delete the opt dex file for recreating
-        //    if (optDexFile.exists()) optDexFile.delete();
-        //    Small.setBundleUpgraded(packageName, false);
-        //}
+        boolean updated = Small.bundleUpdated();
+        if (updated && optDexFile.exists()) {
+            optDexFile.delete();
+        }
 
         String apkPath = loadedApk.assetPath;
         ReflectAccelerator.expandDexPathList(Small.hostApplication().getClassLoader(), apkPath, optDexFile.getPath());
