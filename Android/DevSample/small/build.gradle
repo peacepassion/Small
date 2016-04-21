@@ -7,27 +7,47 @@ buildscript {
     }
 }
 
-apply from: 'base.gradle'
+apply plugin: 'com.android.library'
+apply plugin: 'eradle'
 
-//--------------------------------------------------------------------------------------------------
-// Scripts to install plugin to local repository [~/.m2/repository]
-// > ./gradlew install
-//--------------------------------------------------------------------------------------------------
-task install(type: GradleBuild) {
-    buildFile = 'install.gradle'
-    tasks = ['install']
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.1"
+
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
 }
 
-//--------------------------------------------------------------------------------------------------
-// Scripts to upload plugin to Bintray/JCenter [https://bintray.com/]
-// > ./gradlew bintrayUpload
-//--------------------------------------------------------------------------------------------------
-task bintrayUpload(type: GradleBuild) {
-    buildFile = 'publish.gradle'
-    tasks = ['bintrayUpload']
+dependencies {
+    compile 'com.google.code.gson:gson:2.6.2'
+    compile 'com.squareup.okhttp3:okhttp:3.2.0'
 }
 
-task doc(type: GradleBuild) {
-    buildFile = 'publish.gradle'
-    tasks = ['javadoc']
+modifyPom {
+    project {
+        groupId 'me.ele'
+        artifactId 'small'
+        version '0.7.0-SNAPSHOT'
+        packaging 'aar'
+    }
+}
+
+extraArchive {
+    sources = false
+}
+
+nexus {
+    repositoryUrl "http://172.16.10.156:8081/nexus/content/repositories/android/"
+    snapshotRepositoryUrl "http://172.16.10.156:8081/nexus/content/repositories/snapshots/"
 }
