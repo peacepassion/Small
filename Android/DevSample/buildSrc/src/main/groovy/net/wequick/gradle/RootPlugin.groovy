@@ -122,6 +122,16 @@ class RootPlugin extends BasePlugin {
                 rename {"$libName-r.jar"}
             }
         }
+
+        // todo need to find a better way
+        File libs = new File(lib.projectDir, 'libs')
+        if (libs.exists()) {
+            project.copy {
+                from lib.fileTree(dir: libs.absolutePath, include: ['*.jar'])
+                into preJarDir
+            }
+        }
+
         //  - copy dependencies jars
         ext.explodeAarDirs.each {
             // explodedDir: **/exploded-aar/$group/$artifact/$version
