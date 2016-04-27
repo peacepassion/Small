@@ -29,6 +29,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -263,9 +264,9 @@ public final class Small {
         if (TextUtils.isEmpty(uriStr)) {
             throw new IllegalArgumentException("intent must contain a valid key value of Small#KEY_ACTIVITY_URI");
         }
-        Bundle bundle = findTargetBundle(uriStr);
+        Bundle bundle = findActivityTargetBundle(uriStr);
         if (bundle == null) {
-            Log.w(LOG_TAG, "fail to find target bundle for uri: " + uriStr);
+            Log.w(LOG_TAG, "fail to find activity target bundle for uri: " + uriStr);
             return;
         }
         try {
@@ -277,10 +278,33 @@ public final class Small {
     }
 
     // todo check the
-    private static Bundle findTargetBundle(String uriStr) {
+    private static Bundle findActivityTargetBundle(String uriStr) {
         for (Bundle bundle : loadedBundles) {
-            if (bundle.isTarget(uriStr)) {
+            if (bundle.isActivityTarget(uriStr)) {
                 return bundle;
+            }
+        }
+        return null;
+    }
+
+    public static String invokeBundle(Context context, String uri, String param) {
+        Bundle bundle = findInvokeTargetBundle(uri);
+        if (bundle == null) {
+            Log.w(LOG_TAG, "fail to find invoke bundle for uri: " + uri);
+            return null;
+        }
+        try {
+            return bundle.invoke(context, uri, param);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static Bundle findInvokeTargetBundle(String uri) {
+        for (Bundle loadedBundle : loadedBundles) {
+            if (loadedBundle.isInvokeTarget(uri)) {
+                return loadedBundle;
             }
         }
         return null;

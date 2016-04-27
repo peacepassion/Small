@@ -26,6 +26,7 @@ public class BundleManifest {
     @SerializedName("uri") private String uri;
     @SerializedName("pkg") private String packageName;
     @SerializedName("rules") private Map<String, String> rules;
+    @SerializedName("interfaces") private Map<String, String> bundleHandlers;
 
     public String packageName() {
       return packageName;
@@ -37,6 +38,10 @@ public class BundleManifest {
 
     public String uri() {
       return uri;
+    }
+
+    public Map<String, String> bundleHandlers() {
+      return bundleHandlers;
     }
 
     @Override public String toString() {

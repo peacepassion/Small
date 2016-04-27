@@ -16,10 +16,14 @@
 
 package net.wequick.small;
 
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.text.TextUtils;
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
 import net.wequick.small.util.BundleParser;
 import net.wequick.small.util.FileUtils;
 import net.wequick.small.util.JNIUtils;
@@ -120,13 +124,48 @@ public class Bundle {
         }
     }
 
-    public boolean isTarget(String uriStr) {
+    public boolean isActivityTarget(String uriStr) {
         String host = uriStr;
         int splashIndex = uriStr.indexOf('/');
         if (splashIndex != -1) {
             host = uriStr.substring(0, splashIndex);
         }
         return host.equals(bundleInfo.uri());
+    }
+
+    public boolean isInvokeTarget(String uriStr) {
+        if (bundleInfo.bundleHandlers() == null) {
+            return false;
+        }
+        for (String s : bundleInfo.bundleHandlers().keySet()) {
+            if (s.equals(uriStr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String invoke(Context context, String uriStr, String param)
+        throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+        InvocationTargetException, InstantiationException {
+        if (bundleInfo.bundleHandlers() == null) {
+            return null;
+        }
+        for (Map.Entry<String, String> entry : bundleInfo.bundleHandlers().entrySet()) {
+            if (entry.getKey().equals(uriStr)) {
+                String val = entry.getValue();
+                String clsName = val.startsWith(".") ? bundleInfo.packageName() + val : val;
+                Class clz = Class.forName(clsName);
+                Constructor constructor = clz.getConstructor();
+                Object instance = constructor.newInstance();
+                if (!BundleInterface.class.isAssignableFrom(instance.getClass())) {
+                    throw new ClassCastException("invoke handler declared in bundle.json must implement BundleInterface.class");
+                }
+                BundleInterface handler = (BundleInterface) instance;
+                return handler.call(context, param);
+            }
+        }
+        return null;
     }
 
     public Class getTargetClass(String uriStr) throws ClassNotFoundException {
@@ -165,5 +204,4 @@ public class Bundle {
             super(detailMessage, throwable);
         }
     }
-
 }

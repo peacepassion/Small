@@ -189,6 +189,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            rootView.findViewById(R.id.invoke_mine).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Small.invokeBundle(getActivity(), "mine_say_hi", "Regards from main bundle");
+                }
+            });
+
             return rootView;
         }
     }
