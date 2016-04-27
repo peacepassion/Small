@@ -139,6 +139,11 @@ class AppPlugin extends BundlePlugin {
                         symbolsPath
             }
         }
+        if (isBuildingBundle) {
+            // to support data binding in bundle
+            // remove data binding dependency
+            compile.exclude group: 'com.android.databinding', module: 'adapters'
+        }
     }
 
     @Override
