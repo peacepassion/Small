@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
+import android.content.res.Resources;
 import android.os.Handler;
 import android.text.TextUtils;
 import java.lang.reflect.Field;
@@ -93,7 +94,7 @@ public class ApkBundleLauncher {
 
         // Merge all the resources in bundles and replace the host one
         Application app = Small.hostApplication();
-        ResourcesMerger rm = ResourcesMerger.merge(app.getBaseContext(), this);
+        Resources rm = ResourcesMerger.merge(app.getBaseContext(), this);
         ReflectAccelerator.setResources(app, rm);
     }
 

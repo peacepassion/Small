@@ -7,12 +7,9 @@ import android.content.res.Resources;
 import android.util.DisplayMetrics;
 import net.wequick.small.util.ReflectAccelerator;
 
-public class ResourcesMerger extends Resources {
-  public ResourcesMerger(AssetManager assets, DisplayMetrics metrics, Configuration config) {
-    super(assets, metrics, config);
-  }
+public class ResourcesMerger {
 
-  public static ResourcesMerger merge(Context context, ApkBundleLauncher apkBundleLauncher) {
+  public static Resources merge(Context context, ApkBundleLauncher apkBundleLauncher) {
     AssetManager assets = ReflectAccelerator.newAssetManager();
 
     // Add plugin asset paths
@@ -23,7 +20,15 @@ public class ResourcesMerger extends Resources {
     ReflectAccelerator.addAssetPath(assets, context.getPackageResourcePath());
 
     Resources base = context.getResources();
-    return new ResourcesMerger(assets,
-        base.getDisplayMetrics(), base.getConfiguration());
+    DisplayMetrics metrics = base.getDisplayMetrics();
+    Configuration configuration = base.getConfiguration();
+    Class baseClass = base.getClass();
+    if (baseClass == Resources.class) {
+      return new Resources(assets, metrics, configuration);
+    } else {
+      // Some crazy manufacturers will modify the application resources class.
+      // As Nubia, it use `NubiaResources'. So we had to create a related instance. #135
+      return ReflectAccelerator.newResources(baseClass, assets, metrics, configuration);
+    }
   }
 }

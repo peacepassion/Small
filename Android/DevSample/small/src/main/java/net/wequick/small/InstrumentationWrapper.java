@@ -39,7 +39,7 @@ public class InstrumentationWrapper extends Instrumentation {
       Context who, IBinder contextThread, IBinder token, Activity target,
       Intent intent, int requestCode, android.os.Bundle options) {
     wrapIntent(intent);
-    return ReflectAccelerator.execStartActivityV21(apkBundleLauncher.hostInstrumentation(),
+    return ReflectAccelerator.execStartActivity(apkBundleLauncher.hostInstrumentation(),
         who, contextThread, token, target, intent, requestCode, options);
   }
 
@@ -49,7 +49,7 @@ public class InstrumentationWrapper extends Instrumentation {
       Context who, IBinder contextThread, IBinder token, Activity target,
       Intent intent, int requestCode) {
     wrapIntent(intent);
-    return ReflectAccelerator.execStartActivityV20(apkBundleLauncher.hostInstrumentation(),
+    return ReflectAccelerator.execStartActivity(apkBundleLauncher.hostInstrumentation(),
         who, contextThread, token, target, intent, requestCode);
   }
 
@@ -65,7 +65,7 @@ public class InstrumentationWrapper extends Instrumentation {
       applyActivityInfo(activity, ai);
     } while (false);
 
-    super.callActivityOnCreate(activity, icicle);
+    apkBundleLauncher.hostInstrumentation().callActivityOnCreate(activity, icicle);
   }
 
   /**
@@ -90,7 +90,7 @@ public class InstrumentationWrapper extends Instrumentation {
       if (ai == null) break;
       inqueueStubActivity(ai, realClazz);
     } while (false);
-    super.callActivityOnDestroy(activity);
+    apkBundleLauncher.hostInstrumentation().callActivityOnDestroy(activity);
   }
 
   private void wrapIntent(Intent intent) {
